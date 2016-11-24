@@ -30,6 +30,8 @@ grey_train['features'] = []
 for i in range(len(X_train)):
     grey_train['features'].append(rgb_to_gray(X_train[i]))
 train['features'] = grey_train['features']
+# print("Train features type: {}".format(type(train['features'])))
+
 
 grey_test = {}
 grey_test['features'] = []
@@ -76,7 +78,7 @@ one_hot_test_labels = dense_to_one_hot(test['labels'], n_classes)
 
 # Parameters
 learning_rate = 0.005
-iterations = 5000
+iterations = 20000
 train_batch_size = 100
 test_batch_size = 50
 display_step = 10
@@ -350,8 +352,9 @@ with tf.Session() as sess:
 
 
 # notes to self of stuff to do:
-# 1) upsampling to make categories balanced, + jitter
-# 2) getting validation set
+# 0) FILL IN PYTHON NOTEBOOK
+# 1) getting validation set
+# 2) upsampling to make categories balanced, + jitter
 # *** use scikit learn train test split
 
 # *** try jittering: rotation sheer and translation i guess. merge this w upsamling to get more balanced set
