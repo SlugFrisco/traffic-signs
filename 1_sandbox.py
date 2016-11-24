@@ -21,23 +21,26 @@ testing_file = 'lab 2 data/test.p'
 with open(training_file, mode='rb') as f:
     train = pickle.load(f)
 with open(testing_file, mode='rb') as f:
-    test = pickle.load(f)
+    test = pickle.load(f)# Get signnames.csv and put it into a dict
+with open('signnames.csv', mode='r') as infile:
+    reader = csv.reader(infile, delimiter=',')
+    labels_dict = {rows[0]:rows[1] for rows in reader}
+
+# Takes in a numerical label and returns the right text string
+def get_text(num_label):
+    return labels_dict[str(num_label)]
+
+# Create another np ndarray of the text labels instead
+# 'dtype = object' allows the np.ndarray to take in strings
+text_labels = np.ndarray(len(train['labels']), dtype=object)
+for i in range(0, len(train['labels'])):
+    text_labels[i] = get_text(train['labels'][i])
 
 X_train, Y_train = train['features'], train['labels']
 X_test, Y_test = test['features'], test['labels']
 
 # HELPER STUFF-----------------------------------------
-# Get signnames.csv and put it into a dict
-with open('signnames.csv', mode='r') as infile:
-    reader = csv.reader(infile, delimiter=',')
-    labels_dict = {rows[0]:rows[1] for rows in reader}
-# 'dtype = object' allows the np.ndarray to take in strings
-new_labels = np.ndarray(len(train['labels']), dtype=object)
 
-
-# Takes in a numerical label and returns the right text string
-def get_text(num_label):
-    return labels_dict[str(num_label)]
 
 
 # Plot an example of each type
@@ -60,3 +63,13 @@ def plot_all(features, labels):
 
 plot_all(train['features'], train['labels'])
 
+
+# Plot a histogram of the labels
+def plot_hist(labels):
+    label_counts = Counter(labels)
+    ordered_counts = OrderedDict(label_counts.most_common())
+    df = pd.DataFrame.from_dict(ordered_counts, orient='index')
+    df.plot(kind='bar', legend=None, figsize=(15,10))
+    plt.show()
+
+plot_hist(text_labels)
