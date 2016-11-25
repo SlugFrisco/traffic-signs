@@ -445,5 +445,7 @@ def predict(sess, image):
 # Run stuff here
 train(sess, iterations)
 
-image_to_predict = "school.jpg"
-predict(sess, image_to_predict)
+images_to_predict = ["school.jpg", "arret.jpg", "arret_stop.jpg", "bus.jpg",
+                     "100.jpg", "100_europe.jpg", "60_europe.jpg", "80.jpg", "40.jpg"]
+for image in images_to_predict:
+    predict(sess, image)
