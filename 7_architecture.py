@@ -14,7 +14,7 @@ import pickle
 
 # Parameters
 learning_rate = 0.001
-iterations = 5000
+iterations = 6000
 train_batch_size = 50
 test_batch_size = 50
 display_step = 10
@@ -308,6 +308,9 @@ logits = new_fc_layer(input = layer_fc2,
 # pass logits into softmax, get predictions out in the form of probabilities
 y_pred = tf.nn.softmax(logits)  # DON'T FEED THIS INTO tf.nn.softmax_cross_entropy_with_logits()
 
+top_k_logits = tf.nn.top_k(logits, k=5, sorted=True)
+top_k_softmax = tf.nn.top_k(y_pred, k=5, sorted=True)
+
 y_pred_cls = tf.argmax(y_pred, dimension=1)
 
 # # Define loss and optimizer
@@ -373,7 +376,7 @@ def print_test_accuracy(session, val_features, val_labels, val_onehot):
     print(msg.format(acc, correct_sum, num_test))
 
 
-# # Initializing the variables, create the session
+# initialize variables, create the session
 init = tf.initialize_all_variables()
 sess = tf.Session()
 
@@ -409,24 +412,36 @@ def train(sess, iterations):
 
 # place one .jpg or png image inside the Tensorflow session after training
 # classify it, output the softmax probabilities
-def classify(session, image, true_dense_label):
+def classify(session, image_name, image, true_dense_label, top_k=False):
     # label must be a numpy array
     # create feed_dict of one image
     img_dict = {x: image,
                  y_true: dense_to_one_hot(true_dense_label, n_classes),
                  keep_prob: 1.0}
     y_pred_img = session.run(y_pred, feed_dict=img_dict)
+    if top_k:
+        logit_values, logit_indices = session.run(top_k_logits, feed_dict=img_dict)
+        softmax_values, softmax_indices = session.run(top_k_softmax, feed_dict=img_dict)
+        print('-' * 5)
+        print(image_name)
+        print('-'*5)
+        for i in range(0, len(logit_indices[0])):
+            print("Rank: {}\t Logit: {:.5f}\t Softmax: {:.5f}\t Sign: {}".format(i+1,
+                                                                                 logit_values[0][i],
+                                                                                 softmax_values[0][i],
+                                                                                 get_text(logit_indices[0][i])))
+        print("")
     return y_pred_img
 
 
 # Test on my own image
-def predict(sess, image):
+def predict(sess, image, top_k=False):
     # returns label in dense format
     img = cv2.imread(image)
     gray_img = rgb_to_gray(img)
     label = 0 ## meaningless dummy label to feed into dict
     # Must feed in numpy arrays of lists, even if only single items
-    softmax_img = classify(sess, np.asarray([gray_img]), np.asarray([label]))
+    softmax_img = classify(sess, image, np.asarray([gray_img]), np.asarray([label]), top_k=top_k)
     dense_label = np.argmax(softmax_img)
     text_label = get_text(np.argmax(softmax_img))
     softmax_prob = softmax_img[0][np.argmax(softmax_img)]
@@ -436,16 +451,22 @@ def predict(sess, image):
     return dense_label
 
 
+def final_test_acc():
+    print_test_accuracy(sess, test2['features'], test2['labels'], one_hot_test_labels)
+
+
 # notes to self of stuff to do:
 # 0) FILL IN PYTHON NOTEBOOK
 # 1) k top predictions, probabilities
 # 2) upsampling to make categories balanced, + jitter
+# 3) Add a final test accuracy
 
 
 # Run stuff here
 train(sess, iterations)
 
 images_to_predict = ["school.jpg", "arret.jpg", "arret_stop.jpg", "bus.jpg",
-                     "100.jpg", "100_europe.jpg", "60_europe.jpg", "80.jpg", "40.jpg"]
+                     "100.jpg", "100_europe.jpg", "60.jpg", "80.jpg", "40.jpg"]
 for image in images_to_predict:
-    predict(sess, image)
+    predict(sess, image, top_k=True)
+
