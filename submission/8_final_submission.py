@@ -14,7 +14,7 @@ import pickle
 
 # Parameters
 learning_rate = 0.001
-iterations = 10000
+iterations = 6000
 train_batch_size = 50
 test_batch_size = 50
 display_step = 10
@@ -318,7 +318,7 @@ y_pred_cls = tf.argmax(y_pred, dimension=1)
 
 # # Define loss and optimizer
 cost = tf.reduce_mean(tf.nn.softmax_cross_entropy_with_logits(logits, y_true))
-optimizer = tf.train.GradientDescentOptimizer(learning_rate=learning_rate).minimize(cost)
+optimizer = tf.train.AdamOptimizer(learning_rate=learning_rate).minimize(cost)
 
 # DEFINE SOME PERFORMANCE MEASURES
 correct_prediction = tf.equal(y_pred_cls, y_true_cls)
