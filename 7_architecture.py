@@ -14,15 +14,10 @@ import pickle
 
 # Parameters
 learning_rate = 0.001
-iterations = 6000
+iterations = 10000
 train_batch_size = 50
 test_batch_size = 50
 display_step = 10
-
-
-# Helper function: convert an np.ndarray image from RGB to grayscale using OpenCV
-def rgb_to_gray(image):
-    return cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
 
 training_file = 'lab 2 data/train.p'
 testing_file = 'lab 2 data/test.p'
@@ -43,14 +38,20 @@ X_train, Y_train = train['features'], train['labels']
 X_test, Y_test = test['features'], test['labels']
 
 
-# # Color to RGB, and normalize the numpy ndarray values to mean 0
+### Preprocess the data here.
+### Feel free to use as many code cells as needed.
+
+## Helper function: convert an np.ndarray image from RGB to grayscale using OpenCV
+def rgb_to_gray(image):
+    return cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
+
+
+# # Color to grey
 grey_train = {}
 grey_train['features'] = []
 for i in range(len(X_train)):
     grey_train['features'].append(rgb_to_gray(X_train[i]))
 train['features'] = grey_train['features']
-# print("Train features type: {}".format(type(train['features'])))
-
 
 grey_test = {}
 grey_test['features'] = []
@@ -60,16 +61,19 @@ test['features'] = grey_test['features']
 
 
 ## Normalize: (value - 128) / 128
+def normalize(image_list):
+    normalized_train = {}
+    normalized_train['features'] = []
+    for i in range(len(image_list)):
+        normalized_train['features'].append((image_list[i]) / 256)
+    return normalized_train['features']
+
 normalized_train = {}
-normalized_train['features'] = []
-for i in range(len(train['features'])):
-    normalized_train['features'].append((train['features'][i] - 128) / 128)
+normalized_train['features'] = normalize(train['features'])
 train['features'] = normalized_train['features']
 
 normalized_test = {}
-normalized_test['features'] = []
-for i in range(len(test['features'])):
-    normalized_test['features'].append((test['features'][i] - 128) / 128)
+normalized_test['features'] = normalize(test['features'])
 test['features'] = normalized_test['features']
 
 
@@ -240,7 +244,7 @@ fc_size2 = 64
 
 # ------------------
 # Get some image dimensions
-img_size = 32
+img_size = image_shape[0]
 img_size_flat = img_size * img_size
 img_shape = (img_size, img_size)
 num_channels = 1        # Grayscale so only one channel
@@ -308,7 +312,6 @@ logits = new_fc_layer(input = layer_fc2,
 # pass logits into softmax, get predictions out in the form of probabilities
 y_pred = tf.nn.softmax(logits)  # DON'T FEED THIS INTO tf.nn.softmax_cross_entropy_with_logits()
 
-top_k_logits = tf.nn.top_k(logits, k=5, sorted=True)
 top_k_softmax = tf.nn.top_k(y_pred, k=5, sorted=True)
 
 y_pred_cls = tf.argmax(y_pred, dimension=1)
@@ -408,6 +411,10 @@ def train(sess, iterations):
     print("Optimization Finished!")
     print("--- %s seconds ---" % (time.time() - start_time))
     print_test_accuracy(sess, validation['features'], validation['labels'], one_hot_val_labels)
+    # print('-' * 5)
+    # print('Final test accuracy:')
+    # print('-' * 5)
+    # print_test_accuracy(sess, test2['features'], test2['labels'], one_hot_test_labels)
 
 
 # place one .jpg or png image inside the Tensorflow session after training
@@ -420,16 +427,13 @@ def classify(session, image_name, image, true_dense_label, top_k=False):
                  keep_prob: 1.0}
     y_pred_img = session.run(y_pred, feed_dict=img_dict)
     if top_k:
-        logit_values, logit_indices = session.run(top_k_logits, feed_dict=img_dict)
         softmax_values, softmax_indices = session.run(top_k_softmax, feed_dict=img_dict)
         print('-' * 5)
         print(image_name)
         print('-'*5)
-        for i in range(0, len(logit_indices[0])):
-            print("Rank: {}\t Logit: {:.5f}\t Softmax: {:.5f}\t Sign: {}".format(i+1,
-                                                                                 logit_values[0][i],
-                                                                                 softmax_values[0][i],
-                                                                                 get_text(logit_indices[0][i])))
+        for i in range(0, len(softmax_indices[0])):
+            print("Rank: {}\t Softmax: {:.5f}\t Sign: {}".format(i+1, softmax_values[0][i],
+                                                                 get_text(softmax_indices[0][i])))
         print("")
     return y_pred_img
 
@@ -439,9 +443,10 @@ def predict(sess, image, top_k=False):
     # returns label in dense format
     img = cv2.imread(image)
     gray_img = rgb_to_gray(img)
-    label = 0 ## meaningless dummy label to feed into dict
+    normal_img = normalize([gray_img])
+    label = [0] ## meaningless dummy label to feed into dict
     # Must feed in numpy arrays of lists, even if only single items
-    softmax_img = classify(sess, image, np.asarray([gray_img]), np.asarray([label]), top_k=top_k)
+    softmax_img = classify(sess, image, np.asarray(normal_img), np.asarray(label), top_k=top_k)
     dense_label = np.argmax(softmax_img)
     text_label = get_text(np.argmax(softmax_img))
     softmax_prob = softmax_img[0][np.argmax(softmax_img)]
